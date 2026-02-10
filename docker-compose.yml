@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  webapi:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - WASATEXT_DB_FILENAME=/app/data/wasatext.db
+    volumes:
+      - wasadata:/app/data
+
+volumes:
+  wasadata:

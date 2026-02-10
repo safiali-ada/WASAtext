@@ -2,19 +2,19 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/webui
 COPY webui/package.json ./
-# Install dependencies
-RUN npm install
+# Install dependencies using yarn and offline mirror if configured, or just install
+# Since we are checking functionality, we will use yarn install specific to the environment
+RUN yarn install
 COPY webui/ ./
-RUN npm run build
+RUN yarn build
 
 # Build stage for backend
 FROM golang:1.21 AS backend-builder
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-# Enable CGO for SQLite
-RUN CGO_ENABLED=1 GOOS=linux go build -o webapi ./cmd/webapi/
+COPY vendor/ vendor/
+# Use vendor directory
+RUN go build -mod=vendor -o webapi ./cmd/webapi/
 
 # Final stage
 FROM debian:bookworm-slim
@@ -23,6 +23,7 @@ WORKDIR /app
 
 # Copy backend binary
 COPY --from=backend-builder /app/webapi .
+COPY demo/config.yaml /app/config.yaml
 
 # Copy frontend build
 COPY --from=frontend-builder /app/webui/dist ./webui/dist

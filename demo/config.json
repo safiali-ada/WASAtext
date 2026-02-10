@@ -1,5 +1,0 @@
-server:
-  port: 3000
-database:
-  driver: sqlite3
-  source: ./wasatext.db
