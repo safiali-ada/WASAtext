@@ -214,7 +214,6 @@ paths:
                   maxLength: 64
           multipart/form-data:
             schema:
-            schema:
               type: object
               description: Multipart body for sending a photo
               properties:
@@ -825,9 +824,9 @@ components:
           enum: [0, 1, 2]
           description: "0=sent, 1=received by all, 2=read by all"
         replyTo:
+          nullable: true
           allOf:
             - $ref: "#/components/schemas/MessagePreview"
-            - nullable: true
         forwarded:
           type: boolean
           description: Whether the message was forwarded
