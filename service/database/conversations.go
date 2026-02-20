@@ -11,7 +11,7 @@ func (db *appdbimpl) CreatePrivateConversation(id, user1ID, user2ID string) erro
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.Exec("INSERT INTO conversations (id, type) VALUES (?, 'private')", id)
 	if err != nil {
@@ -33,7 +33,7 @@ func (db *appdbimpl) CreateGroupConversation(id, name, creatorID string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.Exec("INSERT INTO conversations (id, type, group_name) VALUES (?, 'group', ?)", id, name)
 	if err != nil {

@@ -61,7 +61,7 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 		}
 		if len(p.Photo) > 0 {
 			var photoURL string
-			if p.Type == "group" {
+			if p.Type == ConversationTypeGroup {
 				photoURL = "/groups/" + p.ID + "/photo"
 			} else {
 				photoURL = "/users/" + p.ID + "/photo"
@@ -78,7 +78,9 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		rt.baseLogger.WithError(err).Error("error encoding response")
+	}
 }
 
 // getConversation returns a conversation with messages
@@ -109,7 +111,9 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	// Mark as read
-	rt.db.MarkConversationRead(conversationID, ctx.UserID)
+	if err := rt.db.MarkConversationRead(conversationID, ctx.UserID); err != nil {
+		rt.baseLogger.WithError(err).Error("error marking conversation as read")
+	}
 
 	// Get members
 	members, err := rt.db.GetGroupMembers(conversationID)
@@ -218,7 +222,9 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		rt.baseLogger.WithError(err).Error("error encoding response")
+	}
 }
 
 // startConversation creates or returns a private conversation
@@ -262,7 +268,9 @@ func (rt *_router) startConversation(w http.ResponseWriter, r *http.Request, ps 
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			rt.baseLogger.WithError(err).Error("error encoding response")
+		}
 		return
 	}
 
@@ -283,5 +291,7 @@ func (rt *_router) startConversation(w http.ResponseWriter, r *http.Request, ps 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		rt.baseLogger.WithError(err).Error("error encoding response")
+	}
 }

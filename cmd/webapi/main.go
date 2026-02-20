@@ -29,8 +29,10 @@ import (
 )
 
 func main() {
+	logger := logrus.New()
+	logger.SetOutput(os.Stdout)
 	if err := run(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "error: ", err)
+		logger.WithError(err).Error("application error")
 		os.Exit(1)
 	}
 }

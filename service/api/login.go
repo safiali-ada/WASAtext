@@ -57,5 +57,7 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(loginResponse{Identifier: identifier})
+	if err := json.NewEncoder(w).Encode(loginResponse{Identifier: identifier}); err != nil {
+		rt.baseLogger.WithError(err).Error("error encoding response")
+	}
 }

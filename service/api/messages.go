@@ -137,7 +137,9 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		rt.baseLogger.WithError(err).Error("error encoding response")
+	}
 }
 
 // forwardMessage forwards a message to a conversation
@@ -229,7 +231,9 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		rt.baseLogger.WithError(err).Error("error encoding response")
+	}
 }
 
 // deleteMessage deletes a message

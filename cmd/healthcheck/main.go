@@ -1,16 +1,27 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: healthcheck <url>")
+	logger := logrus.New()
+	logger.SetOutput(os.Stdout)
+
+	if err := run(logger); err != nil {
+		logger.WithError(err).Error("healthcheck failed")
 		os.Exit(1)
+	}
+}
+
+func run(logger *logrus.Logger) error {
+	if len(os.Args) < 2 {
+		logger.Error("Usage: healthcheck <url>")
+		return nil
 	}
 
 	url := os.Args[1]
@@ -20,16 +31,15 @@ func main() {
 
 	resp, err := client.Get(url)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Healthcheck failed: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Fprintf(os.Stderr, "Healthcheck failed with status: %d\n", resp.StatusCode)
-		os.Exit(1)
+		logger.Errorf("healthcheck failed with status: %d", resp.StatusCode)
+		return nil
 	}
 
-	fmt.Println("Healthcheck passed")
-	os.Exit(0)
+	logger.Info("Healthcheck passed")
+	return nil
 }

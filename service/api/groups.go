@@ -67,7 +67,9 @@ func (rt *_router) createGroup(w http.ResponseWriter, r *http.Request, ps httpro
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		rt.baseLogger.WithError(err).Error("error encoding response")
+	}
 }
 
 // addToGroup adds a user to the group
@@ -81,7 +83,7 @@ func (rt *_router) addToGroup(w http.ResponseWriter, r *http.Request, ps httprou
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if conv == nil || conv.Type != "group" {
+	if conv == nil || conv.Type != ConversationTypeGroup {
 		http.Error(w, "Group not found", http.StatusNotFound)
 		return
 	}
@@ -143,7 +145,7 @@ func (rt *_router) leaveGroup(w http.ResponseWriter, r *http.Request, ps httprou
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if conv == nil || conv.Type != "group" {
+	if conv == nil || conv.Type != ConversationTypeGroup {
 		http.Error(w, "Group not found", http.StatusNotFound)
 		return
 	}
@@ -168,7 +170,7 @@ func (rt *_router) setGroupName(w http.ResponseWriter, r *http.Request, ps httpr
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if conv == nil || conv.Type != "group" {
+	if conv == nil || conv.Type != ConversationTypeGroup {
 		http.Error(w, "Group not found", http.StatusNotFound)
 		return
 	}
@@ -216,7 +218,7 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if conv == nil || conv.Type != "group" {
+	if conv == nil || conv.Type != ConversationTypeGroup {
 		http.Error(w, "Group not found", http.StatusNotFound)
 		return
 	}
