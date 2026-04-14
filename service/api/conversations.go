@@ -64,7 +64,7 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 			if p.Type == ConversationTypeGroup {
 				photoURL = "/groups/" + p.ID + "/photo"
 			} else {
-				photoURL = "/users/" + p.ID + "/photo"
+				photoURL = "/users/" + p.OtherUserID + "/photo"
 			}
 			response[i].PhotoURL = &photoURL
 		}

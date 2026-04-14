@@ -43,11 +43,16 @@ type AppDatabase interface {
 	DeleteMessage(id string) error
 	GetConversationMessages(conversationID string) ([]Message, error)
 	GetMessageCheckmarks(messageID string) (int, error)
+	GetMessagePhoto(messageID string) ([]byte, error)
 
 	// Comment operations
 	AddComment(messageID, userID, comment string) error
 	RemoveComment(messageID, userID string) error
 	GetMessageComments(messageID string) ([]Comment, error)
+
+	// Photo retrieval operations
+	GetUserPhoto(userID string) ([]byte, error)
+	GetGroupPhoto(groupID string) ([]byte, error)
 
 	Ping() error
 }
@@ -73,6 +78,7 @@ type ConversationPreview struct {
 	Type          string
 	Name          string
 	Photo         []byte
+	OtherUserID   string
 	LatestMessage *MessagePreview
 }
 

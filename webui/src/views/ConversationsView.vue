@@ -113,6 +113,12 @@ export default {
   },
   mounted() {
     this.loadConversations()
+    this.pollInterval = setInterval(this.loadConversations, 5000)
+  },
+  beforeUnmount() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+    }
   },
   methods: {
     async loadConversations() {

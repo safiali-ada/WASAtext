@@ -51,13 +51,17 @@ func (db *appdbimpl) CreateGroupConversation(id, name, creatorID string) error {
 // GetConversation retrieves a conversation by ID
 func (db *appdbimpl) GetConversation(id string) (*Conversation, error) {
 	var conv Conversation
+	var groupName sql.NullString
 	err := db.c.QueryRow("SELECT id, type, group_name, photo FROM conversations WHERE id = ?", id).
-		Scan(&conv.ID, &conv.Type, &conv.GroupName, &conv.Photo)
+		Scan(&conv.ID, &conv.Type, &groupName, &conv.Photo)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
+	}
+	if groupName.Valid {
+		conv.GroupName = groupName.String
 	}
 	return &conv, nil
 }
@@ -130,12 +134,16 @@ func (db *appdbimpl) GetUserConversations(userID string) ([]ConversationPreview,
 		previews = append(previews, p)
 	}
 
-	// For private conversations, we need to get the other user's name
+	// For private conversations, we need to get the other user's name and photo
 	for i := range previews {
 		if previews[i].Type == "private" {
 			otherUser, err := db.getOtherUserInConversation(previews[i].ID, userID)
 			if err == nil && otherUser != nil {
 				previews[i].Name = otherUser.Username
+				previews[i].OtherUserID = otherUser.ID
+				if len(otherUser.Photo) > 0 {
+					previews[i].Photo = otherUser.Photo
+				}
 			}
 		}
 	}
@@ -234,4 +242,17 @@ func (db *appdbimpl) GetGroupMembers(groupID string) ([]User, error) {
 		users = append(users, user)
 	}
 	return users, rows.Err()
+}
+
+// GetGroupPhoto retrieves a group's photo
+func (db *appdbimpl) GetGroupPhoto(groupID string) ([]byte, error) {
+	var photo []byte
+	err := db.c.QueryRow("SELECT photo FROM conversations WHERE id = ? AND type = 'group'", groupID).Scan(&photo)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return photo, nil
 }

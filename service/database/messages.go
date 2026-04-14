@@ -192,3 +192,16 @@ func (db *appdbimpl) GetMessageComments(messageID string) ([]Comment, error) {
 	}
 	return comments, rows.Err()
 }
+
+// GetMessagePhoto retrieves a message's photo
+func (db *appdbimpl) GetMessagePhoto(messageID string) ([]byte, error) {
+	var photo []byte
+	err := db.c.QueryRow("SELECT photo FROM messages WHERE id = ?", messageID).Scan(&photo)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return photo, nil
+}

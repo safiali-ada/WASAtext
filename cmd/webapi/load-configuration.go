@@ -35,7 +35,7 @@ func loadConfiguration() (WebAPIConfiguration, error) {
 
 	// Hardcoded timeouts for simplicity
 	cfg.Web.ReadTimeout = 5 * time.Second
-	cfg.Web.WriteTimeout = 5 * time.Second
+	cfg.Web.WriteTimeout = 30 * time.Second
 	cfg.Web.ShutdownTimeout = 5 * time.Second
 
 	if os.Getenv("WASATEXT_DEBUG") == "true" {

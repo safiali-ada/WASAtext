@@ -128,3 +128,23 @@ func (rt *_router) searchUsers(w http.ResponseWriter, r *http.Request, ps httpro
 		rt.baseLogger.WithError(err).Error("error encoding response")
 	}
 }
+
+// getUserPhoto serves a user's profile photo
+func (rt *_router) getUserPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+	userID := ps.ByName("userId")
+
+	photo, err := rt.db.GetUserPhoto(userID)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error getting user photo")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if photo == nil || len(photo) == 0 {
+		http.Error(w, "Photo not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "public, max-age=60")
+	w.Write(photo)
+}

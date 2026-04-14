@@ -21,11 +21,11 @@
       >
         <div v-if="msg.forwarded" class="forwarded-label">↪ Forwarded</div>
         <div v-if="msg.replyTo" class="reply-preview">
-          Replying to: {{ msg.replyTo.content }}
+          Replying to: <span v-if="msg.replyTo.content && msg.replyTo.content.startsWith('/messages/')">📷 Photo</span><span v-else>{{ msg.replyTo.content }}</span>
         </div>
         <div v-if="msg.senderId !== userId" class="message-sender">{{ msg.senderUsername }}</div>
         <div class="message-content">
-          <img v-if="msg.type === 'photo'" :src="msg.content" style="max-width: 200px; border-radius: 8px;" />
+          <img v-if="msg.type === 'photo'" :src="'/api' + msg.content" style="max-width: 200px; border-radius: 8px;" />
           <span v-else>{{ msg.content }}</span>
         </div>
         <div class="message-meta">
@@ -35,8 +35,8 @@
           </span>
         </div>
         <div class="reactions" v-if="msg.comments && msg.comments.length > 0">
-          <span v-for="c in msg.comments" :key="c.userId" class="reaction">
-            {{ c.comment }}
+          <span v-for="c in msg.comments" :key="c.userId" class="reaction" :title="c.username">
+            {{ c.comment }} <small class="reaction-author">{{ c.username }}</small>
           </span>
         </div>
         <div class="message-actions">
@@ -155,7 +155,7 @@ export default {
   },
   mounted() {
     this.loadConversation()
-    this.pollInterval = setInterval(this.loadConversation, 5000)
+    this.pollInterval = setInterval(this.loadConversation, 3000)
   },
   beforeUnmount() {
     if (this.pollInterval) {
@@ -345,5 +345,10 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+.reaction-author {
+  font-size: 10px;
+  color: #888;
+  margin-left: 2px;
 }
 </style>
