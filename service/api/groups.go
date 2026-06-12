@@ -277,3 +277,23 @@ func (rt *_router) getGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	w.Header().Set("Cache-Control", "public, max-age=60")
 	w.Write(photo)
 }
+
+// getGroupPhotoPublic serves a group's photo without authentication
+func (rt *_router) getGroupPhotoPublic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	groupID := ps.ByName("groupId")
+
+	photo, err := rt.db.GetGroupPhoto(groupID)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error getting group photo")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if photo == nil || len(photo) == 0 {
+		http.Error(w, "Photo not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "public, max-age=60")
+	w.Write(photo)
+}

@@ -17,6 +17,7 @@ type messageResponse struct {
 	SenderUsername string                  `json:"senderUsername"`
 	Type           string                  `json:"type"`
 	Content        string                  `json:"content"`
+	PhotoURL       *string                 `json:"photoUrl,omitempty"`
 	Timestamp      string                  `json:"timestamp"`
 	Checkmarks     int                     `json:"checkmarks"`
 	ReplyTo        *messagePreviewResponse `json:"replyTo,omitempty"`
@@ -102,6 +103,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		msg.Type = "photo"
 		msg.Photo = photo
 		msg.ReplyToID = r.FormValue("replyToId")
+		msg.Content = r.FormValue("content")
 	}
 
 	if err := rt.db.CreateMessage(&msg); err != nil {
@@ -129,10 +131,10 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		Comments:       []commentResponse{},
 	}
 
-	if msg.Type == "text" {
-		response.Content = msg.Content
-	} else {
-		response.Content = "/messages/" + msg.ID + "/photo"
+	response.Content = msg.Content
+	if msg.Type == "photo" {
+		photoURL := "/messages/" + msg.ID + "/photo"
+		response.PhotoURL = &photoURL
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -223,10 +225,10 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		Comments:       []commentResponse{},
 	}
 
-	if newMsg.Type == "text" {
-		response.Content = newMsg.Content
-	} else {
-		response.Content = "/messages/" + newMsg.ID + "/photo"
+	response.Content = newMsg.Content
+	if newMsg.Type == "photo" {
+		photoURL := "/messages/" + newMsg.ID + "/photo"
+		response.PhotoURL = &photoURL
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -269,6 +271,26 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 
 // getMessagePhoto serves a message's photo
 func (rt *_router) getMessagePhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+	messageID := ps.ByName("messageId")
+
+	photo, err := rt.db.GetMessagePhoto(messageID)
+	if err != nil {
+		rt.baseLogger.WithError(err).Error("error getting message photo")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if photo == nil || len(photo) == 0 {
+		http.Error(w, "Photo not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	w.Write(photo)
+}
+
+// getMessagePhotoPublic serves a message's photo without authentication
+func (rt *_router) getMessagePhotoPublic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	messageID := ps.ByName("messageId")
 
 	photo, err := rt.db.GetMessagePhoto(messageID)

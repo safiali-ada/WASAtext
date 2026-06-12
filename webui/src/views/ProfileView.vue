@@ -16,6 +16,9 @@
 
     <div class="profile-section">
       <h3>Profile Photo</h3>
+      <div v-if="photoPreviewUrl" style="margin-bottom: 10px;">
+        <img :src="photoPreviewUrl" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" />
+      </div>
       <input type="file" ref="photoInput" @change="updatePhoto" accept="image/*" />
       <p v-if="photoError" style="color: red; margin-top: 10px;">{{ photoError }}</p>
       <p v-if="photoSuccess" style="color: green; margin-top: 10px;">{{ photoSuccess }}</p>
@@ -40,7 +43,15 @@ export default {
       usernameError: '',
       usernameSuccess: '',
       photoError: '',
-      photoSuccess: ''
+      photoSuccess: '',
+      photoTimestamp: Date.now()
+    }
+  },
+  computed: {
+    photoPreviewUrl() {
+      const userId = localStorage.getItem('wasatext_user_id')
+      if (!userId) return null
+      return '/api/users/' + userId + '/photo?t=' + this.photoTimestamp
     }
   },
   methods: {
@@ -79,6 +90,7 @@ export default {
           headers: { 'Content-Type': file.type }
         })
         this.photoSuccess = 'Photo updated successfully!'
+        this.photoTimestamp = Date.now()
       } catch (err) {
         this.photoError = 'Failed to update photo'
       }

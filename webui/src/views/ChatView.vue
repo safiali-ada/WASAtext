@@ -2,7 +2,10 @@
   <div class="chat-view">
     <div class="chat-header">
       <button class="btn-icon" @click="goBack">←</button>
-      <div class="conversation-avatar" style="margin: 0 10px;">{{ getInitial(conversation.name) }}</div>
+      <div class="conversation-avatar" style="margin: 0 10px;">
+        <img v-if="conversationPhotoUrl" :src="'/api' + conversationPhotoUrl" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
+        <span v-else>{{ getInitial(conversation.name) }}</span>
+      </div>
       <div>
         <h3>{{ conversation.name }}</h3>
         <small v-if="conversation.type === 'group'">{{ conversation.members?.length || 0 }} members</small>
@@ -21,12 +24,12 @@
       >
         <div v-if="msg.forwarded" class="forwarded-label">↪ Forwarded</div>
         <div v-if="msg.replyTo" class="reply-preview">
-          Replying to: <span v-if="msg.replyTo.content && msg.replyTo.content.startsWith('/messages/')">📷 Photo</span><span v-else>{{ msg.replyTo.content }}</span>
+          Replying to: {{ msg.replyTo.content || '📷 Photo' }}
         </div>
         <div v-if="msg.senderId !== userId" class="message-sender">{{ msg.senderUsername }}</div>
         <div class="message-content">
-          <img v-if="msg.type === 'photo'" :src="'/api' + msg.content" style="max-width: 200px; border-radius: 8px;" />
-          <span v-else>{{ msg.content }}</span>
+          <span v-if="msg.content && msg.content.length > 0">{{ msg.content }}</span>
+          <img v-if="msg.photoUrl" :src="'/api' + msg.photoUrl" style="max-width: 200px; border-radius: 8px;" @error="$event.target.style.display='none'" />
         </div>
         <div class="message-meta">
           {{ formatTime(msg.timestamp) }}
@@ -96,6 +99,14 @@
         </div>
 
         <div style="margin-bottom: 15px;">
+          <label>Group Photo</label>
+          <div v-if="conversation.photoUrl" style="margin: 5px 0;">
+            <img :src="'/api' + conversation.photoUrl" style="width:60px;height:60px;border-radius:50%;object-fit:cover;" />
+          </div>
+          <input type="file" accept="image/*" @change="updateGroupPhoto" />
+        </div>
+
+        <div style="margin-bottom: 15px;">
           <label>Members</label>
           <div v-for="member in conversation.members" :key="member.id" style="padding: 5px 0;">
             {{ member.username }}
@@ -150,7 +161,21 @@ export default {
       memberSearchResults: [],
       forwardingMessage: null,
       forwardQuery: '',
-      forwardResults: []
+      forwardResults: [],
+      allConversationsForForward: []
+    }
+  },
+  computed: {
+    conversationPhotoUrl() {
+      if (!this.conversation || !this.conversation.type) return null
+      if (this.conversation.type === 'group' && this.conversation.photoUrl) {
+        return this.conversation.photoUrl
+      }
+      if (this.conversation.type === 'private' && this.conversation.members) {
+        const other = this.conversation.members.find(m => m.id !== this.userId)
+        if (other && other.photoUrl) return other.photoUrl
+      }
+      return null
     }
   },
   mounted() {
@@ -173,7 +198,7 @@ export default {
       try {
         const response = await axios.get(`/conversations/${id}`)
         this.conversation = response.data
-        this.messages = response.data.messages || []
+        this.messages = (response.data.messages || []).slice().reverse()
         this.groupName = this.conversation.name
       } catch (err) {
         console.error('Error loading conversation:', err)
@@ -207,6 +232,9 @@ export default {
       const formData = new FormData()
       formData.append('photo', file)
       formData.append('type', 'photo')
+      if (this.newMessage && this.newMessage.trim()) {
+        formData.append('content', this.newMessage.trim())
+      }
       if (this.replyingTo) {
         formData.append('replyToId', this.replyingTo.id)
       }
@@ -215,12 +243,14 @@ export default {
         await axios.post(`/conversations/${this.conversation.id}/messages`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
+        this.newMessage = ''
         this.replyingTo = null
         await this.loadConversation()
         this.scrollToBottom()
       } catch (err) {
         console.error('Error sending photo:', err)
       }
+      this.$refs.fileInput.value = ''
     },
     setReplyTo(msg) {
       this.replyingTo = msg
@@ -238,23 +268,29 @@ export default {
         console.error('Error toggling reaction:', err)
       }
     },
-    forwardMessage(msg) {
+    async forwardMessage(msg) {
       this.forwardingMessage = msg
+      this.forwardQuery = ''
+      try {
+        const response = await axios.get(`/users/${this.userId}/conversations`)
+        this.allConversationsForForward = (response.data || []).filter(c => c.id !== this.conversation.id)
+        this.forwardResults = this.allConversationsForForward
+      } catch (err) {
+        console.error('Error loading conversations for forward:', err)
+      }
     },
-    async searchForForward() {
-      if (this.forwardQuery.length < 1) {
+    searchForForward() {
+      if (!this.allConversationsForForward) {
         this.forwardResults = []
         return
       }
-      try {
-        const response = await axios.get(`/users/${this.userId}/conversations`)
-        this.forwardResults = (response.data || []).filter(c => 
-          c.name.toLowerCase().includes(this.forwardQuery.toLowerCase()) &&
-          c.id !== this.conversation.id
-        )
-      } catch (err) {
-        console.error('Error searching:', err)
+      if (this.forwardQuery.length < 1) {
+        this.forwardResults = this.allConversationsForForward
+        return
       }
+      this.forwardResults = this.allConversationsForForward.filter(c =>
+        c.name.toLowerCase().includes(this.forwardQuery.toLowerCase())
+      )
     },
     async doForward(conv) {
       try {
@@ -316,6 +352,18 @@ export default {
         this.$router.push('/conversations')
       } catch (err) {
         console.error('Error leaving group:', err)
+      }
+    },
+    async updateGroupPhoto(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      try {
+        await axios.put(`/groups/${this.conversation.id}/photo`, file, {
+          headers: { 'Content-Type': file.type }
+        })
+        await this.loadConversation()
+      } catch (err) {
+        console.error('Error updating group photo:', err)
       }
     },
     goBack() {

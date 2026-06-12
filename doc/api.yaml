@@ -127,6 +127,29 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalServerError"
+    get:
+      tags: ["User"]
+      operationId: getUserPhoto
+      summary: Get user profile photo
+      description: Returns the user's profile photo as binary image data
+      responses:
+        "200":
+          description: Photo returned successfully
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+                description: Binary JPEG image data
+            image/png:
+              schema:
+                type: string
+                format: binary
+                description: Binary PNG image data
+        "404":
+          description: Photo not found
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /users/{userId}/conversations:
     parameters:
@@ -310,6 +333,28 @@ paths:
           description: User is not the sender of this message
         "404":
           description: Message not found
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /messages/{messageId}/photo:
+    parameters:
+      - $ref: "#/components/parameters/messageId"
+    get:
+      tags: ["Messages"]
+      operationId: getMessagePhoto
+      summary: Get message photo
+      description: Returns the photo attached to a message as binary image data
+      responses:
+        "200":
+          description: Photo returned successfully
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+                description: Binary JPEG image data
+        "404":
+          description: Photo not found
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -540,6 +585,24 @@ paths:
           description: User is not a member of this group
         "404":
           description: Group not found
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    get:
+      tags: ["Groups"]
+      operationId: getGroupPhoto
+      summary: Get group photo
+      description: Returns the group photo as binary image data
+      responses:
+        "200":
+          description: Photo returned successfully
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+                description: Binary JPEG image data
+        "404":
+          description: Photo not found
         "500":
           $ref: "#/components/responses/InternalServerError"
 

@@ -135,6 +135,11 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		}
 	}
 
+	// Mark conversation as read
+	if err := rt.db.MarkConversationRead(conversationID, req.UserID); err != nil {
+		rt.baseLogger.WithError(err).Error("error marking conversation as read")
+	}
+
 	// Get messages
 	messages, err := rt.db.GetConversationMessages(conversationID)
 	if err != nil {
@@ -167,10 +172,10 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 			Comments:       make([]commentResponse, len(comments)),
 		}
 
-		if msg.Type == "text" {
-			messageResponses[i].Content = msg.Content
-		} else {
-			messageResponses[i].Content = "/messages/" + msg.ID + "/photo"
+		messageResponses[i].Content = msg.Content
+		if msg.Type == "photo" {
+			photoURL := "/messages/" + msg.ID + "/photo"
+			messageResponses[i].PhotoURL = &photoURL
 		}
 
 		for j, c := range comments {

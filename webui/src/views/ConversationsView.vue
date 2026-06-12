@@ -32,7 +32,10 @@
           :class="{ active: selectedConversation === conv.id }"
           @click="openConversation(conv)"
         >
-          <div class="conversation-avatar">{{ getInitial(conv.name) }}</div>
+          <div class="conversation-avatar">
+            <img v-if="conv.photoUrl" :src="'/api' + conv.photoUrl" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
+            <span v-else>{{ getInitial(conv.name) }}</span>
+          </div>
           <div class="conversation-info">
             <div class="conversation-name">{{ conv.name }}</div>
             <div class="conversation-preview" v-if="conv.latestMessage">
