@@ -26,10 +26,11 @@ Built with Go (backend), Vue.js (frontend), and SQLite (database).
 # Build and start everything
 docker-compose up --build
 
-# The app will be available at http://localhost:3000
+# The frontend will be available at http://localhost:3000
+# The backend API is also exposed directly at http://localhost:3001
 ```
 
-That's it! Docker handles the frontend build, backend compilation, and database setup.
+That's it! Docker Compose builds `Dockerfile.frontend` and `Dockerfile.backend`, wires the frontend `/api` proxy to the backend service, and keeps the SQLite data in a volume.
 
 ### Running Locally (For Development)
 
@@ -92,7 +93,7 @@ SQLite database is stored in `/app/data/wasatext.db` (in Docker) or `./wasatext.
 
 ## What's Under the Hood?
 
-- **Backend**: Go with Gorilla Mux for routing
+- **Backend**: Go with `httprouter` for routing
 - **Frontend**: Vue.js 3 with Vue Router
 - **Database**: SQLite3 (simple and effective)
 - **Containerization**: Docker with multi-stage builds

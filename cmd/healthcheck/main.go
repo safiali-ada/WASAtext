@@ -35,7 +35,7 @@ func run(logger *logrus.Logger) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		logger.Errorf("healthcheck failed with status: %d", resp.StatusCode)
 		return nil
 	}

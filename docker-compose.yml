@@ -1,14 +1,25 @@
 version: '3.8'
 
 services:
-  webapi:
-    build: .
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - WASATEXT_DB_FILENAME=/app/data/wasatext.db
     volumes:
       - wasadata:/app/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   wasadata:

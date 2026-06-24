@@ -110,11 +110,6 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
-	// Mark as read
-	if err := rt.db.MarkConversationRead(conversationID, ctx.UserID); err != nil {
-		rt.baseLogger.WithError(err).Error("error marking conversation as read")
-	}
-
 	// Get members
 	members, err := rt.db.GetGroupMembers(conversationID)
 	if err != nil {
@@ -136,7 +131,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	// Mark conversation as read
-	if err := rt.db.MarkConversationRead(conversationID, req.UserID); err != nil {
+	if err := rt.db.MarkConversationRead(conversationID, ctx.UserID); err != nil {
 		rt.baseLogger.WithError(err).Error("error marking conversation as read")
 	}
 
