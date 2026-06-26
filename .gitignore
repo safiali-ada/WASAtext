@@ -1,3 +1,5 @@
-wasatext.db
+*.db
+webapi
+.DS_Store
 webui/dist/
 webui/node_modules/

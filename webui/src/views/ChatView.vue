@@ -3,7 +3,7 @@
     <div class="chat-header">
       <button class="btn-icon" @click="goBack">←</button>
       <div class="conversation-avatar" style="margin: 0 10px;">
-        <img v-if="conversationPhotoUrl" :src="'/api' + conversationPhotoUrl" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
+        <img v-if="conversationPhotoUrl" :src="assetURL(conversationPhotoUrl)" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
         <span v-else>{{ getInitial(conversation.name) }}</span>
       </div>
       <div>
@@ -29,7 +29,7 @@
         <div v-if="msg.senderId !== userId" class="message-sender">{{ msg.senderUsername }}</div>
         <div class="message-content">
           <span v-if="msg.content && msg.content.length > 0">{{ msg.content }}</span>
-          <img v-if="msg.photoUrl" :src="'/api' + msg.photoUrl" style="max-width: 200px; border-radius: 8px;" @error="$event.target.style.display='none'" />
+          <img v-if="msg.photoUrl" :src="assetURL(msg.photoUrl)" style="max-width: 200px; border-radius: 8px;" @error="$event.target.style.display='none'" />
         </div>
         <div class="message-meta">
           {{ formatTime(msg.timestamp) }}
@@ -101,7 +101,7 @@
         <div style="margin-bottom: 15px;">
           <label>Group Photo</label>
           <div v-if="conversation.photoUrl" style="margin: 5px 0;">
-            <img :src="'/api' + conversation.photoUrl" style="width:60px;height:60px;border-radius:50%;object-fit:cover;" />
+            <img :src="assetURL(conversation.photoUrl)" style="width:60px;height:60px;border-radius:50%;object-fit:cover;" />
           </div>
           <input type="file" accept="image/*" @change="updateGroupPhoto" />
         </div>
@@ -144,7 +144,7 @@
 </template>
 
 <script>
-import axios from '../services/axios.js'
+import axios, { apiAssetURL } from '../services/axios.js'
 
 export default {
   name: 'ChatView',
@@ -193,6 +193,7 @@ export default {
     }
   },
   methods: {
+    assetURL: apiAssetURL,
     async loadConversation() {
       const id = this.$route.params.id
       try {

@@ -118,7 +118,7 @@ func (rt *_router) searchUsers(w http.ResponseWriter, r *http.Request, ps httpro
 			Username: u.Username,
 		}
 		if len(u.Photo) > 0 {
-			photoURL := "/users/" + u.ID + "/photo"
+			photoURL := usersPathPrefix + u.ID + photoPathSuffix
 			response[i].PhotoURL = &photoURL
 		}
 	}
@@ -129,8 +129,8 @@ func (rt *_router) searchUsers(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 }
 
-// getUserPhoto serves a user's profile photo
-func (rt *_router) getUserPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+// getUserPhoto serves a user's profile photo without authentication.
+func (rt *_router) getUserPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	userID := ps.ByName("userId")
 
 	photo, err := rt.db.GetUserPhoto(userID)
@@ -139,32 +139,14 @@ func (rt *_router) getUserPhoto(w http.ResponseWriter, r *http.Request, ps httpr
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if photo == nil || len(photo) == 0 {
+	if len(photo) == 0 {
 		http.Error(w, "Photo not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Cache-Control", "public, max-age=60")
-	w.Write(photo)
-}
-
-// getUserPhotoPublic serves a user's profile photo without authentication
-func (rt *_router) getUserPhotoPublic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	userID := ps.ByName("userId")
-
-	photo, err := rt.db.GetUserPhoto(userID)
-	if err != nil {
-		rt.baseLogger.WithError(err).Error("error getting user photo")
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
+	if _, err := w.Write(photo); err != nil {
+		rt.baseLogger.WithError(err).Error("error writing user photo")
 	}
-	if photo == nil || len(photo) == 0 {
-		http.Error(w, "Photo not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=60")
-	w.Write(photo)
 }

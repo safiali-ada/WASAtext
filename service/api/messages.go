@@ -71,7 +71,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			return
 		}
 
-		if req.Type != "text" && req.Type != "photo" {
+		if req.Type != "text" && req.Type != messageTypePhoto {
 			http.Error(w, "Invalid message type", http.StatusBadRequest)
 			return
 		}
@@ -87,7 +87,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			return
 		}
 
-		file, _, err := r.FormFile("photo")
+		file, _, err := r.FormFile(messageTypePhoto)
 		if err != nil {
 			http.Error(w, "Error reading photo", http.StatusBadRequest)
 			return
@@ -100,7 +100,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			return
 		}
 
-		msg.Type = "photo"
+		msg.Type = messageTypePhoto
 		msg.Photo = photo
 		msg.ReplyToID = r.FormValue("replyToId")
 		msg.Content = r.FormValue("content")
@@ -132,8 +132,8 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 
 	response.Content = msg.Content
-	if msg.Type == "photo" {
-		photoURL := "/messages/" + msg.ID + "/photo"
+	if msg.Type == messageTypePhoto {
+		photoURL := messagesPathPrefix + msg.ID + photoPathSuffix
 		response.PhotoURL = &photoURL
 	}
 
@@ -226,8 +226,8 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	response.Content = newMsg.Content
-	if newMsg.Type == "photo" {
-		photoURL := "/messages/" + newMsg.ID + "/photo"
+	if newMsg.Type == messageTypePhoto {
+		photoURL := messagesPathPrefix + newMsg.ID + photoPathSuffix
 		response.PhotoURL = &photoURL
 	}
 
@@ -269,8 +269,8 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// getMessagePhoto serves a message's photo
-func (rt *_router) getMessagePhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+// getMessagePhoto serves a message's photo without authentication.
+func (rt *_router) getMessagePhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	messageID := ps.ByName("messageId")
 
 	photo, err := rt.db.GetMessagePhoto(messageID)
@@ -279,32 +279,14 @@ func (rt *_router) getMessagePhoto(w http.ResponseWriter, r *http.Request, ps ht
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if photo == nil || len(photo) == 0 {
+	if len(photo) == 0 {
 		http.Error(w, "Photo not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	w.Write(photo)
-}
-
-// getMessagePhotoPublic serves a message's photo without authentication
-func (rt *_router) getMessagePhotoPublic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	messageID := ps.ByName("messageId")
-
-	photo, err := rt.db.GetMessagePhoto(messageID)
-	if err != nil {
-		rt.baseLogger.WithError(err).Error("error getting message photo")
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
+	if _, err := w.Write(photo); err != nil {
+		rt.baseLogger.WithError(err).Error("error writing message photo")
 	}
-	if photo == nil || len(photo) == 0 {
-		http.Error(w, "Photo not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=300")
-	w.Write(photo)
 }

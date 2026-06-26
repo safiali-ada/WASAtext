@@ -1,7 +1,13 @@
 import axios from 'axios'
 
+export const apiBaseURL = import.meta.env.DEV ? '/api' : 'http://localhost:3000'
+
+export function apiAssetURL(path) {
+    return `${apiBaseURL}${path}`
+}
+
 const instance = axios.create({
-    baseURL: '/api',
+    baseURL: apiBaseURL,
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json'

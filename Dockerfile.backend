@@ -15,12 +15,8 @@ WORKDIR /app
 
 COPY --from=builder /app/webapi .
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data
-
 EXPOSE 3000
 
-ENV WASATEXT_DB_FILENAME=/app/data/wasatext.db
 ENV WASATEXT_WEB_APIHOST=:3000
 
 CMD ["./webapi"]

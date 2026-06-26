@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import axios from '../services/axios.js'
+import axios, { apiAssetURL } from '../services/axios.js'
 
 export default {
   name: 'ProfileView',
@@ -51,7 +51,7 @@ export default {
     photoPreviewUrl() {
       const userId = localStorage.getItem('wasatext_user_id')
       if (!userId) return null
-      return '/api/users/' + userId + '/photo?t=' + this.photoTimestamp
+      return apiAssetURL(`/users/${userId}/photo?t=${this.photoTimestamp}`)
     }
   },
   methods: {

@@ -258,8 +258,8 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// getGroupPhoto serves a group's photo
-func (rt *_router) getGroupPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+// getGroupPhoto serves a group's photo without authentication.
+func (rt *_router) getGroupPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	groupID := ps.ByName("groupId")
 
 	photo, err := rt.db.GetGroupPhoto(groupID)
@@ -268,32 +268,14 @@ func (rt *_router) getGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	if photo == nil || len(photo) == 0 {
+	if len(photo) == 0 {
 		http.Error(w, "Photo not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Cache-Control", "public, max-age=60")
-	w.Write(photo)
-}
-
-// getGroupPhotoPublic serves a group's photo without authentication
-func (rt *_router) getGroupPhotoPublic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	groupID := ps.ByName("groupId")
-
-	photo, err := rt.db.GetGroupPhoto(groupID)
-	if err != nil {
-		rt.baseLogger.WithError(err).Error("error getting group photo")
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
+	if _, err := w.Write(photo); err != nil {
+		rt.baseLogger.WithError(err).Error("error writing group photo")
 	}
-	if photo == nil || len(photo) == 0 {
-		http.Error(w, "Photo not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=60")
-	w.Write(photo)
 }

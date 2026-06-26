@@ -62,9 +62,9 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 		if len(p.Photo) > 0 {
 			var photoURL string
 			if p.Type == ConversationTypeGroup {
-				photoURL = "/groups/" + p.ID + "/photo"
+				photoURL = groupsPathPrefix + p.ID + photoPathSuffix
 			} else {
-				photoURL = "/users/" + p.OtherUserID + "/photo"
+				photoURL = usersPathPrefix + p.OtherUserID + photoPathSuffix
 			}
 			response[i].PhotoURL = &photoURL
 		}
@@ -125,7 +125,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 			Username: m.Username,
 		}
 		if len(m.Photo) > 0 {
-			photoURL := "/users/" + m.ID + "/photo"
+			photoURL := usersPathPrefix + m.ID + photoPathSuffix
 			memberResponses[i].PhotoURL = &photoURL
 		}
 	}
@@ -168,8 +168,8 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		}
 
 		messageResponses[i].Content = msg.Content
-		if msg.Type == "photo" {
-			photoURL := "/messages/" + msg.ID + "/photo"
+		if msg.Type == messageTypePhoto {
+			photoURL := messagesPathPrefix + msg.ID + photoPathSuffix
 			messageResponses[i].PhotoURL = &photoURL
 		}
 
@@ -217,7 +217,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	if len(conv.Photo) > 0 {
-		photoURL := "/groups/" + conv.ID + "/photo"
+		photoURL := groupsPathPrefix + conv.ID + photoPathSuffix
 		response.PhotoURL = &photoURL
 	}
 

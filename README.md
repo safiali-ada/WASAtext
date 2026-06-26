@@ -26,11 +26,11 @@ Built with Go (backend), Vue.js (frontend), and SQLite (database).
 # Build and start everything
 docker-compose up --build
 
-# The frontend will be available at http://localhost:3000
-# The backend API is also exposed directly at http://localhost:3001
+# The frontend will be available at http://localhost:8081
+# The backend API will be available at http://localhost:3000
 ```
 
-That's it! Docker Compose builds `Dockerfile.frontend` and `Dockerfile.backend`, wires the frontend `/api` proxy to the backend service, and keeps the SQLite data in a volume.
+That's it! Docker Compose builds `Dockerfile.frontend` and `Dockerfile.backend`. The browser connects directly to the backend on port 3000, matching the course's WASA Fountains example.
 
 ### Running Locally (For Development)
 

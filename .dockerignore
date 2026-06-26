@@ -1,0 +1,6 @@
+.git
+**/.DS_Store
+*.db
+webapi
+webui/dist
+webui/node_modules

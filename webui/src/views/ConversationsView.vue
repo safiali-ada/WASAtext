@@ -33,7 +33,7 @@
           @click="openConversation(conv)"
         >
           <div class="conversation-avatar">
-            <img v-if="conv.photoUrl" :src="'/api' + conv.photoUrl" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
+            <img v-if="conv.photoUrl" :src="assetURL(conv.photoUrl)" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
             <span v-else>{{ getInitial(conv.name) }}</span>
           </div>
           <div class="conversation-info">
@@ -97,7 +97,7 @@
 </template>
 
 <script>
-import axios from '../services/axios.js'
+import axios, { apiAssetURL } from '../services/axios.js'
 
 export default {
   name: 'ConversationsView',
@@ -124,6 +124,7 @@ export default {
     }
   },
   methods: {
+    assetURL: apiAssetURL,
     async loadConversations() {
       try {
         const userId = localStorage.getItem('wasatext_user_id')

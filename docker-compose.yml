@@ -6,20 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "3001:3000"
-    environment:
-      - WASATEXT_DB_FILENAME=/app/data/wasatext.db
-    volumes:
-      - wasadata:/app/data
+      - "3000:3000"
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "3000:80"
+      - "8081:80"
     depends_on:
       - backend
-
-volumes:
-  wasadata:

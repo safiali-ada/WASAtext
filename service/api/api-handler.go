@@ -14,7 +14,7 @@ func (rt *_router) Handler() http.Handler {
 	// User routes
 	rt.router.PUT("/users/:userId/username", rt.wrap(rt.setMyUserName))
 	rt.router.PUT("/users/:userId/photo", rt.wrap(rt.setMyPhoto))
-	rt.router.GET("/users/:userId/photo", rt.getUserPhotoPublic)
+	rt.router.GET("/users/:userId/photo", rt.getUserPhoto)
 	rt.router.GET("/users", rt.wrap(rt.searchUsers))
 
 	// Conversation routes
@@ -26,7 +26,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/conversations/:conversationId/messages", rt.wrap(rt.sendMessage))
 	rt.router.POST("/conversations/:conversationId/messages/forward", rt.wrap(rt.forwardMessage))
 	rt.router.DELETE("/messages/:messageId", rt.wrap(rt.deleteMessage))
-	rt.router.GET("/messages/:messageId/photo", rt.getMessagePhotoPublic)
+	rt.router.GET("/messages/:messageId/photo", rt.getMessagePhoto)
 
 	// Reaction routes
 	rt.router.PUT("/messages/:messageId/comment", rt.wrap(rt.commentMessage))
@@ -38,7 +38,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.DELETE("/groups/:groupId/members/:userId", rt.wrap(rt.leaveGroup))
 	rt.router.PUT("/groups/:groupId/name", rt.wrap(rt.setGroupName))
 	rt.router.PUT("/groups/:groupId/photo", rt.wrap(rt.setGroupPhoto))
-	rt.router.GET("/groups/:groupId/photo", rt.getGroupPhotoPublic)
+	rt.router.GET("/groups/:groupId/photo", rt.getGroupPhoto)
 
 	// Liveness check
 	rt.router.GET("/liveness", rt.liveness)
