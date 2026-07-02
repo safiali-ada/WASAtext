@@ -17,7 +17,7 @@ tags:
   - name: Groups
     description: Group management
 servers:
-  - url: http://localhost:3000
+  - url: /
 
 paths:
   /session:
@@ -250,6 +250,10 @@ paths:
                   type: string
                   format: binary
                   description: Binary image data
+                content:
+                  type: string
+                  description: Optional text caption sent with the image
+                  maxLength: 4096
                 replyToId:
                   type: string
                   description: Message ID being replied to
@@ -815,9 +819,11 @@ components:
         content:
           type: string
           description: The content of the message
-          minLength: 1
           maxLength: 4096
-          pattern: "^[\\s\\S]+$"
+        type:
+          type: string
+          description: The message type, used to identify photo replies
+          enum: ["text", "photo"]
         timestamp:
           type: string
           description: The time the message was sent
@@ -830,6 +836,7 @@ components:
           pattern: "^[a-zA-Z0-9-]+$"
       required:
         - content
+        - type
         - timestamp
         - senderId
 

@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -57,6 +58,12 @@ func run() error {
 
 	// Start Database
 	logger.Println("initializing database support")
+	dbDir := filepath.Dir(cfg.DB.Filename)
+	if dbDir != "." {
+		if err := os.MkdirAll(dbDir, 0o755); err != nil {
+			return fmt.Errorf("creating SQLite directory: %w", err)
+		}
+	}
 	dbconn, err := sql.Open("sqlite3", cfg.DB.Filename)
 	if err != nil {
 		logger.WithError(err).Error("error opening SQLite DB")

@@ -17,6 +17,7 @@ COPY --from=builder /app/webapi .
 
 EXPOSE 3000
 
+ENV WASATEXT_DB_FILENAME=/tmp/wasatext.db
 ENV WASATEXT_WEB_APIHOST=:3000
 
 CMD ["./webapi"]

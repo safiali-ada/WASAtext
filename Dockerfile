@@ -31,13 +31,10 @@ COPY demo/config.yaml /app/config.yaml
 # Copy frontend build
 COPY --from=frontend-builder /app/webui/dist ./webui/dist
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data
-
 EXPOSE 3000
 
 # Set environment variables
-ENV WASATEXT_DB_FILENAME=/app/data/wasatext.db
+ENV WASATEXT_DB_FILENAME=/tmp/wasatext.db
 ENV WASATEXT_WEB_APIHOST=:3000
 
 CMD ["./webapi"]

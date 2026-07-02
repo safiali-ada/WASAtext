@@ -130,6 +130,12 @@ export default {
         const userId = localStorage.getItem('wasatext_user_id')
         const response = await axios.get(`/users/${userId}/conversations`)
         this.conversations = response.data || []
+        if (this.searchQuery) {
+          await this.searchUsers()
+        }
+        if (this.showNewChat && this.newChatUsername) {
+          await this.searchForNewChat()
+        }
       } catch (err) {
         console.error('Error loading conversations:', err)
       }

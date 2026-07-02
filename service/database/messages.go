@@ -78,7 +78,7 @@ func (db *appdbimpl) GetConversationMessages(conversationID string) ([]Message, 
 		SELECT id, conversation_id, sender_id, content, photo, type, reply_to_id, forwarded, created_at
 		FROM messages 
 		WHERE conversation_id = ?
-		ORDER BY created_at DESC
+		ORDER BY created_at DESC, rowid DESC
 	`, conversationID)
 	if err != nil {
 		return nil, err

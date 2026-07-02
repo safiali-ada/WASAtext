@@ -85,6 +85,7 @@ type ConversationPreview struct {
 // MessagePreview represents a message preview
 type MessagePreview struct {
 	Content   string
+	Type      string
 	Timestamp string
 	SenderID  string
 }

@@ -24,7 +24,7 @@
       >
         <div v-if="msg.forwarded" class="forwarded-label">↪ Forwarded</div>
         <div v-if="msg.replyTo" class="reply-preview">
-          Replying to: {{ msg.replyTo.content || '📷 Photo' }}
+          Replying to: <span v-if="msg.replyTo.type === 'photo'">📷 </span>{{ msg.replyTo.content || (msg.replyTo.type === 'photo' ? 'Photo' : '') }}
         </div>
         <div v-if="msg.senderId !== userId" class="message-sender">{{ msg.senderUsername }}</div>
         <div class="message-content">
@@ -57,7 +57,7 @@
     </div>
 
     <div v-if="replyingTo" style="padding: 10px 20px; background: #f0f0f0; display: flex; justify-content: space-between;">
-      <span>Replying to: {{ replyingTo.content?.substring(0, 50) }}...</span>
+      <span>Replying to: <span v-if="replyingTo.type === 'photo'">📷 </span>{{ replyingTo.content?.substring(0, 50) || (replyingTo.type === 'photo' ? 'Photo' : '') }}</span>
       <button class="btn-icon" @click="replyingTo = null">✕</button>
     </div>
 

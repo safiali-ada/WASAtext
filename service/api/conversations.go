@@ -19,6 +19,7 @@ type conversationPreviewResponse struct {
 
 type messagePreviewResponse struct {
 	Content   string `json:"content"`
+	Type      string `json:"type"`
 	Timestamp string `json:"timestamp"`
 	SenderID  string `json:"senderId"`
 }
@@ -71,6 +72,7 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 		if p.LatestMessage != nil {
 			response[i].LatestMessage = &messagePreviewResponse{
 				Content:   p.LatestMessage.Content,
+				Type:      p.LatestMessage.Type,
 				Timestamp: p.LatestMessage.Timestamp,
 				SenderID:  p.LatestMessage.SenderID,
 			}
@@ -189,6 +191,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 				if replySender != nil {
 					messageResponses[i].ReplyTo = &messagePreviewResponse{
 						Content:   replyTo.Content,
+						Type:      replyTo.Type,
 						Timestamp: replyTo.CreatedAt,
 						SenderID:  replySenderID,
 					}

@@ -1,6 +1,16 @@
 import axios from 'axios'
 
-export const apiBaseURL = import.meta.env.DEV ? '/api' : 'http://localhost:3000'
+// The production frontend and backend are built as separate images by the
+// grader.  Derive the backend origin from the page being viewed so deployments
+// reached through a hostname or IP address do not accidentally call the
+// visitor's own localhost.
+const backendURL = new URL(window.location.href)
+backendURL.port = '3000'
+backendURL.pathname = ''
+backendURL.search = ''
+backendURL.hash = ''
+
+export const apiBaseURL = import.meta.env.DEV ? '/api' : backendURL.origin
 
 export function apiAssetURL(path) {
     return `${apiBaseURL}${path}`

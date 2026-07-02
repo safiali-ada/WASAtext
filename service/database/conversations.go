@@ -91,13 +91,14 @@ func (db *appdbimpl) GetUserConversations(userID string) ([]ConversationPreview,
 	query := `
 		SELECT c.id, c.type, c.group_name, c.photo,
 			COALESCE(m.content, '') as latest_content,
+			COALESCE(m.type, '') as latest_type,
 			COALESCE(m.created_at, '') as latest_timestamp,
 			COALESCE(m.sender_id, '') as latest_sender
 		FROM conversations c
 		INNER JOIN conversation_members cm ON c.id = cm.conversation_id AND cm.user_id = ?
 		LEFT JOIN (
-			SELECT conversation_id, content, created_at, sender_id,
-				ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY created_at DESC) as rn
+			SELECT conversation_id, content, type, created_at, sender_id,
+				ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY created_at DESC, rowid DESC) as rn
 			FROM messages
 		) m ON c.id = m.conversation_id AND m.rn = 1
 		ORDER BY m.created_at DESC NULLS LAST
@@ -112,10 +113,10 @@ func (db *appdbimpl) GetUserConversations(userID string) ([]ConversationPreview,
 	for rows.Next() {
 		var p ConversationPreview
 		var groupName sql.NullString
-		var latestContent, latestTimestamp, latestSender string
+		var latestContent, latestType, latestTimestamp, latestSender string
 
 		if err := rows.Scan(&p.ID, &p.Type, &groupName, &p.Photo,
-			&latestContent, &latestTimestamp, &latestSender); err != nil {
+			&latestContent, &latestType, &latestTimestamp, &latestSender); err != nil {
 			return nil, err
 		}
 
@@ -126,6 +127,7 @@ func (db *appdbimpl) GetUserConversations(userID string) ([]ConversationPreview,
 		if latestContent != "" || latestTimestamp != "" {
 			p.LatestMessage = &MessagePreview{
 				Content:   latestContent,
+				Type:      latestType,
 				Timestamp: latestTimestamp,
 				SenderID:  latestSender,
 			}
