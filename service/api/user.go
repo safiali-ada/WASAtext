@@ -98,11 +98,8 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 
 // searchUsers handles user search
 func (rt *_router) searchUsers(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+	// An empty query lists every user, so the frontend can show all usernames
 	query := r.URL.Query().Get("q")
-	if query == "" {
-		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
-		return
-	}
 
 	users, err := rt.db.SearchUsers(query)
 	if err != nil {
@@ -116,10 +113,7 @@ func (rt *_router) searchUsers(w http.ResponseWriter, r *http.Request, ps httpro
 		response[i] = userResponse{
 			ID:       u.ID,
 			Username: u.Username,
-		}
-		if len(u.Photo) > 0 {
-			photoURL := usersPathPrefix + u.ID + photoPathSuffix
-			response[i].PhotoURL = &photoURL
+			PhotoURL: photoURL(usersPathPrefix, u.ID, u.Photo),
 		}
 	}
 
@@ -144,8 +138,8 @@ func (rt *_router) getUserPhoto(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 
-	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=60")
+	w.Header().Set("Content-Type", http.DetectContentType(photo))
+	w.Header().Set("Cache-Control", "no-cache")
 	if _, err := w.Write(photo); err != nil {
 		rt.baseLogger.WithError(err).Error("error writing user photo")
 	}

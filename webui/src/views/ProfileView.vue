@@ -6,6 +6,7 @@
 
     <div class="profile-section">
       <h3>Username</h3>
+      <p class="current-user">Current: <b>{{ currentUsername }}</b></p>
       <input v-model="username" placeholder="New username" />
       <button @click="updateUsername" :disabled="!username || loading">
         {{ loading ? 'Updating...' : 'Update Username' }}
@@ -16,9 +17,10 @@
 
     <div class="profile-section">
       <h3>Profile Photo</h3>
-      <div v-if="photoPreviewUrl" style="margin-bottom: 10px;">
-        <img :src="photoPreviewUrl" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" />
+      <div v-if="photoPreviewUrl && !photoMissing" style="margin-bottom: 10px;">
+        <img :src="photoPreviewUrl" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" @error="photoMissing = true" />
       </div>
+      <p v-else class="current-user">No profile photo yet</p>
       <input type="file" ref="photoInput" @change="updatePhoto" accept="image/*" />
       <p v-if="photoError" style="color: red; margin-top: 10px;">{{ photoError }}</p>
       <p v-if="photoSuccess" style="color: green; margin-top: 10px;">{{ photoSuccess }}</p>
@@ -39,12 +41,14 @@ export default {
   data() {
     return {
       username: localStorage.getItem('wasatext_username') || '',
+      currentUsername: localStorage.getItem('wasatext_username') || '',
       loading: false,
       usernameError: '',
       usernameSuccess: '',
       photoError: '',
       photoSuccess: '',
-      photoTimestamp: Date.now()
+      photoTimestamp: Date.now(),
+      photoMissing: false
     }
   },
   computed: {
@@ -64,12 +68,13 @@ export default {
         const userId = localStorage.getItem('wasatext_user_id')
         await axios.put(`/users/${userId}/username`, { username: this.username })
         localStorage.setItem('wasatext_username', this.username)
+        this.currentUsername = this.username
         this.usernameSuccess = 'Username updated successfully!'
       } catch (err) {
         if (err.response?.status === 409) {
-          this.usernameError = 'Username already taken'
+          this.usernameError = `The username "${this.username}" is already taken by another user. Please choose a different one.`
         } else if (err.response?.status === 400) {
-          this.usernameError = 'Invalid username format (3-16 alphanumeric characters)'
+          this.usernameError = 'Invalid username: use 3-16 letters, numbers or underscores'
         } else {
           this.usernameError = 'Failed to update username'
         }
@@ -90,10 +95,12 @@ export default {
           headers: { 'Content-Type': file.type }
         })
         this.photoSuccess = 'Photo updated successfully!'
+        this.photoMissing = false
         this.photoTimestamp = Date.now()
       } catch (err) {
         this.photoError = 'Failed to update photo'
       }
+      event.target.value = ''
     },
     logout() {
       localStorage.removeItem('wasatext_token')

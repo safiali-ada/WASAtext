@@ -1,16 +1,20 @@
 import axios from 'axios'
 
-// The production frontend and backend are built as separate images by the
-// grader.  Derive the backend origin from the page being viewed so deployments
-// reached through a hostname or IP address do not accidentally call the
-// visitor's own localhost.
-const backendURL = new URL(window.location.href)
-backendURL.port = '3000'
-backendURL.pathname = ''
-backendURL.search = ''
-backendURL.hash = ''
+// The backend URL comes from __API_URL__ in vite.config.js (the constant used in the
+// evaluation). If it still points to localhost but the page was opened from another
+// device (e.g. http://192.168.1.10:4173), "localhost" would be that device itself, so
+// the host serving the page is used instead, keeping the configured port.
+function resolveBackendURL() {
+    const url = new URL(__API_URL__)
+    const pageHost = window.location.hostname
+    const isLoopback = (h) => h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.localhost')
+    if (isLoopback(url.hostname) && !isLoopback(pageHost)) {
+        url.hostname = pageHost
+    }
+    return url.origin
+}
 
-export const apiBaseURL = import.meta.env.DEV ? '/api' : backendURL.origin
+export const apiBaseURL = resolveBackendURL()
 
 export function apiAssetURL(path) {
     return `${apiBaseURL}${path}`

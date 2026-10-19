@@ -1,3 +1,4 @@
+import { h } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import ConversationsView from '../views/ConversationsView.vue'
@@ -11,16 +12,27 @@ const routes = [
         component: LoginView
     },
     {
+        // The chat is nested so the conversation list stays visible (and keeps refreshing)
+        // next to the open conversation.
         path: '/conversations',
-        name: 'conversations',
         component: ConversationsView,
-        meta: { requiresAuth: true }
-    },
-    {
-        path: '/conversations/:id',
-        name: 'chat',
-        component: ChatView,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true },
+        children: [
+            {
+                path: '',
+                name: 'conversations',
+                component: {
+                    name: 'NoChatSelected',
+                    render: () => h('div', { class: 'empty-state' }, [h('p', 'Select a conversation to start messaging')])
+                }
+            },
+            {
+                path: ':id',
+                name: 'chat',
+                component: ChatView,
+                meta: { requiresAuth: true }
+            }
+        ]
     },
     {
         path: '/profile',

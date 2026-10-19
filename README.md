@@ -46,6 +46,29 @@ npm install  # or yarn install
 npm run dev  # or yarn dev
 ```
 
+### Running for the homework evaluation
+
+**Backend** (Go 1.25.1):
+```bash
+export GOTOOLCHAIN=go1.25.1
+go mod tidy
+go mod vendor
+go run ./cmd/webapi
+```
+
+**Frontend** (inside the Node container):
+```bash
+./open-node.sh
+yarn install
+yarn run vite build --mode production
+yarn run vite preview --host 0.0.0.0 --port 4173 --strictPort
+```
+
+Open `http://localhost:4173`, or `http://<your-LAN-IP>:4173` from another device on the same network.
+The backend URL is the `__API_URL__` constant in `webui/vite.config.js` (default `http://localhost:3000`).
+For the multi-device test you can replace `localhost` with your LAN IP as the checklist describes;
+if you leave it unchanged, a page opened through the LAN IP automatically uses that IP for the backend.
+
 ## Project Structure
 
 ```

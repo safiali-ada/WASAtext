@@ -92,7 +92,7 @@ func (db *appdbimpl) GetUserConversations(userID string) ([]ConversationPreview,
 		SELECT c.id, c.type, c.group_name, c.photo,
 			COALESCE(m.content, '') as latest_content,
 			COALESCE(m.type, '') as latest_type,
-			COALESCE(m.created_at, '') as latest_timestamp,
+			COALESCE(STRFTIME('%Y-%m-%dT%H:%M:%fZ', m.created_at), '') as latest_timestamp,
 			COALESCE(m.sender_id, '') as latest_sender
 		FROM conversations c
 		INNER JOIN conversation_members cm ON c.id = cm.conversation_id AND cm.user_id = ?
@@ -183,7 +183,7 @@ func (db *appdbimpl) IsConversationMember(conversationID, userID string) (bool, 
 
 // MarkConversationRead marks all messages in a conversation as read for a user
 func (db *appdbimpl) MarkConversationRead(conversationID, userID string) error {
-	_, err := db.c.Exec("UPDATE conversation_members SET last_read_at = CURRENT_TIMESTAMP WHERE conversation_id = ? AND user_id = ?",
+	_, err := db.c.Exec("UPDATE conversation_members SET last_read_at = STRFTIME('%Y-%m-%d %H:%M:%f', 'now') WHERE conversation_id = ? AND user_id = ?",
 		conversationID, userID)
 	return err
 }

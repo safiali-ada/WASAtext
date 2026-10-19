@@ -273,8 +273,8 @@ func (rt *_router) getGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 
-	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=60")
+	w.Header().Set("Content-Type", http.DetectContentType(photo))
+	w.Header().Set("Cache-Control", "no-cache")
 	if _, err := w.Write(photo); err != nil {
 		rt.baseLogger.WithError(err).Error("error writing group photo")
 	}

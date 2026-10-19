@@ -18,10 +18,11 @@ type conversationPreviewResponse struct {
 }
 
 type messagePreviewResponse struct {
-	Content   string `json:"content"`
-	Type      string `json:"type"`
-	Timestamp string `json:"timestamp"`
-	SenderID  string `json:"senderId"`
+	Content        string `json:"content"`
+	Type           string `json:"type"`
+	Timestamp      string `json:"timestamp"`
+	SenderID       string `json:"senderId"`
+	SenderUsername string `json:"senderUsername,omitempty"`
 }
 
 type conversationResponse struct {
@@ -60,14 +61,10 @@ func (rt *_router) getMyConversations(w http.ResponseWriter, r *http.Request, ps
 			Type: p.Type,
 			Name: p.Name,
 		}
-		if len(p.Photo) > 0 {
-			var photoURL string
-			if p.Type == ConversationTypeGroup {
-				photoURL = groupsPathPrefix + p.ID + photoPathSuffix
-			} else {
-				photoURL = usersPathPrefix + p.OtherUserID + photoPathSuffix
-			}
-			response[i].PhotoURL = &photoURL
+		if p.Type == ConversationTypeGroup {
+			response[i].PhotoURL = photoURL(groupsPathPrefix, p.ID, p.Photo)
+		} else {
+			response[i].PhotoURL = photoURL(usersPathPrefix, p.OtherUserID, p.Photo)
 		}
 		if p.LatestMessage != nil {
 			response[i].LatestMessage = &messagePreviewResponse{
@@ -125,10 +122,7 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		memberResponses[i] = userResponse{
 			ID:       m.ID,
 			Username: m.Username,
-		}
-		if len(m.Photo) > 0 {
-			photoURL := usersPathPrefix + m.ID + photoPathSuffix
-			memberResponses[i].PhotoURL = &photoURL
+			PhotoURL: photoURL(usersPathPrefix, m.ID, m.Photo),
 		}
 	}
 
@@ -171,8 +165,8 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 
 		messageResponses[i].Content = msg.Content
 		if msg.Type == messageTypePhoto {
-			photoURL := messagesPathPrefix + msg.ID + photoPathSuffix
-			messageResponses[i].PhotoURL = &photoURL
+			msgPhotoURL := messagesPathPrefix + msg.ID + photoPathSuffix
+			messageResponses[i].PhotoURL = &msgPhotoURL
 		}
 
 		for j, c := range comments {
@@ -190,10 +184,11 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 				replySenderID := replyTo.SenderID
 				if replySender != nil {
 					messageResponses[i].ReplyTo = &messagePreviewResponse{
-						Content:   replyTo.Content,
-						Type:      replyTo.Type,
-						Timestamp: replyTo.CreatedAt,
-						SenderID:  replySenderID,
+						Content:        replyTo.Content,
+						Type:           replyTo.Type,
+						Timestamp:      replyTo.CreatedAt,
+						SenderID:       replySenderID,
+						SenderUsername: replySender.Username,
 					}
 				}
 			}
@@ -219,9 +214,8 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		Messages: messageResponses,
 	}
 
-	if len(conv.Photo) > 0 {
-		photoURL := groupsPathPrefix + conv.ID + photoPathSuffix
-		response.PhotoURL = &photoURL
+	if conv.Type == ConversationTypeGroup {
+		response.PhotoURL = photoURL(groupsPathPrefix, conv.ID, conv.Photo)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

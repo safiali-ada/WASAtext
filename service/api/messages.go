@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
@@ -64,7 +65,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	msg.ConversationID = conversationID
 	msg.SenderID = ctx.UserID
 
-	if contentType == "application/json" {
+	if strings.HasPrefix(contentType, "application/json") {
 		var req sendMessageRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -73,6 +74,15 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 
 		if req.Type != "text" && req.Type != messageTypePhoto {
 			http.Error(w, "Invalid message type", http.StatusBadRequest)
+			return
+		}
+
+		if req.Type != "text" {
+			http.Error(w, "Photo messages must be sent as multipart/form-data", http.StatusBadRequest)
+			return
+		}
+		if strings.TrimSpace(req.Content) == "" {
+			http.Error(w, "Message content cannot be empty", http.StatusBadRequest)
 			return
 		}
 
@@ -104,6 +114,24 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		msg.Photo = photo
 		msg.ReplyToID = r.FormValue("replyToId")
 		msg.Content = r.FormValue("content")
+		if len(photo) == 0 {
+			http.Error(w, "Empty photo", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// A reply must point to a message of the same conversation
+	if msg.ReplyToID != "" {
+		original, err := rt.db.GetMessage(msg.ReplyToID)
+		if err != nil {
+			rt.baseLogger.WithError(err).Error("error getting replied message")
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		if original == nil || original.ConversationID != conversationID {
+			http.Error(w, "Replied message not found", http.StatusNotFound)
+			return
+		}
 	}
 
 	if err := rt.db.CreateMessage(&msg); err != nil {
@@ -133,8 +161,8 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 
 	response.Content = msg.Content
 	if msg.Type == messageTypePhoto {
-		photoURL := messagesPathPrefix + msg.ID + photoPathSuffix
-		response.PhotoURL = &photoURL
+		msgPhotoURL := messagesPathPrefix + msg.ID + photoPathSuffix
+		response.PhotoURL = &msgPhotoURL
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -227,8 +255,8 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 
 	response.Content = newMsg.Content
 	if newMsg.Type == messageTypePhoto {
-		photoURL := messagesPathPrefix + newMsg.ID + photoPathSuffix
-		response.PhotoURL = &photoURL
+		msgPhotoURL := messagesPathPrefix + newMsg.ID + photoPathSuffix
+		response.PhotoURL = &msgPhotoURL
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -284,7 +312,7 @@ func (rt *_router) getMessagePhoto(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
-	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Content-Type", http.DetectContentType(photo))
 	w.Header().Set("Cache-Control", "public, max-age=300")
 	if _, err := w.Write(photo); err != nil {
 		rt.baseLogger.WithError(err).Error("error writing message photo")

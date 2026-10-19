@@ -19,7 +19,7 @@ func (db *appdbimpl) CreateMessage(msg *Message) error {
 
 	_, err := db.c.Exec(`
 		INSERT INTO messages (id, conversation_id, sender_id, content, photo, type, reply_to_id, forwarded, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, STRFTIME('%Y-%m-%d %H:%M:%f', 'now'))
 	`, msg.ID, msg.ConversationID, msg.SenderID, msg.Content, msg.Photo, msg.Type, replyToID, forwarded)
 	return err
 }
@@ -106,12 +106,11 @@ func (db *appdbimpl) GetConversationMessages(conversationID string) ([]Message, 
 }
 
 // GetMessageCheckmarks calculates checkmarks for a message
-// 0 = just sent, 1 = received by all, 2 = read by all
+// 1 = received by all, 2 = read by all
 func (db *appdbimpl) GetMessageCheckmarks(messageID string) (int, error) {
-	// Get the message info
-	var conversationID, senderID, createdAt string
-	err := db.c.QueryRow("SELECT conversation_id, sender_id, created_at FROM messages WHERE id = ?", messageID).
-		Scan(&conversationID, &senderID, &createdAt)
+	var conversationID, senderID string
+	err := db.c.QueryRow("SELECT conversation_id, sender_id FROM messages WHERE id = ?", messageID).
+		Scan(&conversationID, &senderID)
 	if err != nil {
 		return 0, err
 	}
@@ -128,12 +127,16 @@ func (db *appdbimpl) GetMessageCheckmarks(messageID string) (int, error) {
 		return 2, nil // No other members, consider it read
 	}
 
-	// Count members who have read (last_read_at >= message created_at)
+	// Count members who have read the message. The comparison is done entirely in SQL
+	// so both timestamps keep the same stored text format (the Go driver would turn
+	// created_at into RFC3339, which does not compare correctly against stored values).
 	var readCount int
 	err = db.c.QueryRow(`
-		SELECT COUNT(*) FROM conversation_members 
-		WHERE conversation_id = ? AND user_id != ? AND last_read_at >= ?
-	`, conversationID, senderID, createdAt).Scan(&readCount)
+		SELECT COUNT(*) FROM conversation_members
+		WHERE conversation_id = ? AND user_id != ?
+		AND last_read_at IS NOT NULL
+		AND last_read_at >= (SELECT created_at FROM messages WHERE id = ?)
+	`, conversationID, senderID, messageID).Scan(&readCount)
 	if err != nil {
 		return 0, err
 	}

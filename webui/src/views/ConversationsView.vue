@@ -1,53 +1,62 @@
 <template>
-  <div class="main-container">
+  <div class="main-container" :class="{ 'chat-open': !!selectedConversation }">
     <div class="sidebar">
       <div class="sidebar-header">
-        <h2>Conversations</h2>
         <div>
-          <button class="btn-icon" @click="showNewChat = true" title="New Chat">+</button>
-          <button class="btn-icon" @click="showNewGroup = true" title="New Group">👥</button>
+          <h2>Conversations</h2>
+          <small class="current-user">Logged in as {{ username }}</small>
+        </div>
+        <div class="header-buttons">
+          <button class="btn-icon" @click="openNewChat" title="New chat">✉️</button>
+          <button class="btn-icon" @click="openNewGroup" title="New group">👥</button>
           <button class="btn-icon" @click="goToProfile" title="Profile">⚙️</button>
         </div>
       </div>
 
+      <ErrorMsg :msg="error" @close="error = ''" />
+
       <div class="search-container">
         <input v-model="searchQuery" placeholder="Search users..." @input="searchUsers" />
         <div v-if="searchResults.length > 0" class="search-results">
-          <div 
-            v-for="user in searchResults" 
-            :key="user.id" 
-            class="search-result-item"
+          <div
+            v-for="user in searchResults"
+            :key="user.id"
+            class="search-result-item user-row"
             @click="startConversation(user)"
           >
-            {{ user.username }}
+            <UserAvatar :url="user.photoUrl" :name="user.username" :size="28" />
+            <span>{{ user.username }}</span>
           </div>
         </div>
+        <div v-else-if="searchQuery && searchDone" class="search-empty">No users found</div>
       </div>
 
       <div class="conversation-list">
-        <div 
-          v-for="conv in conversations" 
-          :key="conv.id" 
+        <div
+          v-for="conv in conversations"
+          :key="conv.id"
           class="conversation-item"
           :class="{ active: selectedConversation === conv.id }"
           @click="openConversation(conv)"
         >
-          <div class="conversation-avatar">
-            <img v-if="conv.photoUrl" :src="assetURL(conv.photoUrl)" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
-            <span v-else>{{ getInitial(conv.name) }}</span>
-          </div>
+          <UserAvatar class="conversation-avatar" :url="conv.photoUrl" :name="conv.name" :size="45" />
           <div class="conversation-info">
-            <div class="conversation-name">{{ conv.name }}</div>
-            <div class="conversation-preview" v-if="conv.latestMessage">
-              {{ conv.latestMessage.content }}
+            <div class="conversation-name">
+              <span v-if="conv.type === 'group'" title="Group">👥 </span>{{ conv.name }}
             </div>
+            <div class="conversation-preview" v-if="conv.latestMessage">
+              <span v-if="conv.latestMessage.senderId === userId">You: </span>
+              <span v-if="conv.latestMessage.type === 'photo'">📷 </span>
+              {{ conv.latestMessage.content || (conv.latestMessage.type === 'photo' ? 'Photo' : '') }}
+            </div>
+            <div class="conversation-preview" v-else>No messages yet</div>
           </div>
           <div class="conversation-time" v-if="conv.latestMessage">
-            {{ formatTime(conv.latestMessage.timestamp) }}
+            {{ formatDateTime(conv.latestMessage.timestamp) }}
           </div>
         </div>
 
-        <div v-if="conversations.length === 0" class="empty-state">
+        <div v-if="loaded && conversations.length === 0" class="empty-state">
           <p>No conversations yet</p>
           <p style="font-size: 12px;">Search for users to start chatting</p>
         </div>
@@ -55,26 +64,25 @@
     </div>
 
     <div class="content">
-      <div v-if="!selectedConversation" class="empty-state">
-        <p>Select a conversation to start messaging</p>
-      </div>
-      <router-view v-else />
+      <router-view :key="$route.params.id || 'none'" @changed="loadConversations" />
     </div>
 
-    <!-- New Chat Modal -->
+    <!-- New Chat Modal: lists every WASAText user -->
     <div v-if="showNewChat" class="modal-overlay" @click.self="showNewChat = false">
       <div class="modal">
         <h3>New Conversation</h3>
-        <input v-model="newChatUsername" placeholder="Search username..." @input="searchForNewChat" />
-        <div v-if="newChatResults.length > 0" class="search-results">
-          <div 
-            v-for="user in newChatResults" 
-            :key="user.id" 
-            class="search-result-item"
+        <input v-model="newChatFilter" placeholder="Filter users..." />
+        <div class="search-results modal-list">
+          <div
+            v-for="user in filteredAllUsers(newChatFilter)"
+            :key="user.id"
+            class="search-result-item user-row"
             @click="startConversationFromModal(user)"
           >
-            {{ user.username }}
+            <UserAvatar :url="user.photoUrl" :name="user.username" :size="28" />
+            <span>{{ user.username }}</span>
           </div>
+          <div v-if="filteredAllUsers(newChatFilter).length === 0" class="search-empty">No users found</div>
         </div>
         <div class="modal-actions">
           <button class="btn-secondary" @click="showNewChat = false">Cancel</button>
@@ -82,14 +90,35 @@
       </div>
     </div>
 
-    <!-- New Group Modal -->
+    <!-- New Group Modal: name + members -->
     <div v-if="showNewGroup" class="modal-overlay" @click.self="showNewGroup = false">
       <div class="modal">
         <h3>Create Group</h3>
-        <input v-model="newGroupName" placeholder="Group name" />
+        <input v-model="newGroupName" placeholder="Group name" maxlength="50" />
+        <label class="field-label">Members ({{ selectedMembers.length }} selected)</label>
+        <div class="chips" v-if="selectedMembers.length > 0">
+          <span v-for="u in selectedMembers" :key="u.id" class="chip">
+            {{ u.username }} <button class="chip-remove" @click="toggleMember(u)">✕</button>
+          </span>
+        </div>
+        <input v-model="groupMemberFilter" placeholder="Filter users..." />
+        <div class="search-results modal-list">
+          <label
+            v-for="user in filteredAllUsers(groupMemberFilter)"
+            :key="user.id"
+            class="search-result-item user-row"
+          >
+            <input type="checkbox" class="member-checkbox" :checked="isSelected(user)" @change="toggleMember(user)" />
+            <UserAvatar :url="user.photoUrl" :name="user.username" :size="28" />
+            <span>{{ user.username }}</span>
+          </label>
+        </div>
+        <ErrorMsg :msg="groupError" @close="groupError = ''" />
         <div class="modal-actions">
           <button class="btn-secondary" @click="showNewGroup = false">Cancel</button>
-          <button class="btn-primary" @click="createGroup" :disabled="!newGroupName">Create</button>
+          <button class="btn-primary" @click="createGroup" :disabled="!newGroupName.trim() || creatingGroup">
+            {{ creatingGroup ? 'Creating...' : 'Create' }}
+          </button>
         </div>
       </div>
     </div>
@@ -97,26 +126,45 @@
 </template>
 
 <script>
-import axios, { apiAssetURL } from '../services/axios.js'
+import axios from '../services/axios.js'
+import ErrorMsg from '../components/ErrorMsg.vue'
+import UserAvatar from '../components/UserAvatar.vue'
+import { formatDateTime, errorText } from '../services/format.js'
+
+const REFRESH_ERROR = 'Could not load conversations. Retrying...'
 
 export default {
   name: 'ConversationsView',
+  components: { ErrorMsg, UserAvatar },
   data() {
     return {
       conversations: [],
-      selectedConversation: null,
+      loaded: false,
+      error: '',
+      userId: localStorage.getItem('wasatext_user_id'),
+      username: localStorage.getItem('wasatext_username') || '',
       searchQuery: '',
       searchResults: [],
+      searchDone: false,
+      allUsers: [],
       showNewChat: false,
+      newChatFilter: '',
       showNewGroup: false,
-      newChatUsername: '',
-      newChatResults: [],
-      newGroupName: ''
+      newGroupName: '',
+      groupMemberFilter: '',
+      selectedMembers: [],
+      groupError: '',
+      creatingGroup: false
+    }
+  },
+  computed: {
+    selectedConversation() {
+      return this.$route.params.id || null
     }
   },
   mounted() {
     this.loadConversations()
-    this.pollInterval = setInterval(this.loadConversations, 5000)
+    this.pollInterval = setInterval(this.loadConversations, 3000)
   },
   beforeUnmount() {
     if (this.pollInterval) {
@@ -124,46 +172,70 @@ export default {
     }
   },
   methods: {
-    assetURL: apiAssetURL,
+    formatDateTime,
     async loadConversations() {
       try {
-        const userId = localStorage.getItem('wasatext_user_id')
-        const response = await axios.get(`/users/${userId}/conversations`)
+        const response = await axios.get(`/users/${this.userId}/conversations`)
         this.conversations = response.data || []
+        this.loaded = true
+        if (this.error === REFRESH_ERROR) this.error = ''
+        this.username = localStorage.getItem('wasatext_username') || this.username
         if (this.searchQuery) {
           await this.searchUsers()
         }
-        if (this.showNewChat && this.newChatUsername) {
-          await this.searchForNewChat()
-        }
       } catch (err) {
-        console.error('Error loading conversations:', err)
+        if (err.response?.status !== 401) {
+          this.error = REFRESH_ERROR
+        }
       }
     },
     async searchUsers() {
       if (this.searchQuery.length < 1) {
         this.searchResults = []
+        this.searchDone = false
         return
       }
       try {
-        const response = await axios.get(`/users?q=${encodeURIComponent(this.searchQuery)}`)
-        const userId = localStorage.getItem('wasatext_user_id')
-        this.searchResults = (response.data || []).filter(u => u.id !== userId)
+        const response = await axios.get('/users', { params: { q: this.searchQuery } })
+        this.searchResults = (response.data || []).filter(u => u.id !== this.userId)
+        this.searchDone = true
       } catch (err) {
-        console.error('Error searching users:', err)
+        this.error = errorText(err, 'User search failed')
       }
     },
-    async searchForNewChat() {
-      if (this.newChatUsername.length < 1) {
-        this.newChatResults = []
-        return
-      }
+    async loadAllUsers() {
       try {
-        const response = await axios.get(`/users?q=${encodeURIComponent(this.newChatUsername)}`)
-        const userId = localStorage.getItem('wasatext_user_id')
-        this.newChatResults = (response.data || []).filter(u => u.id !== userId)
+        const response = await axios.get('/users', { params: { q: '' } })
+        this.allUsers = (response.data || []).filter(u => u.id !== this.userId)
       } catch (err) {
-        console.error('Error searching users:', err)
+        this.error = errorText(err, 'Could not load users')
+      }
+    },
+    filteredAllUsers(filter) {
+      const f = (filter || '').toLowerCase()
+      return this.allUsers.filter(u => u.username.toLowerCase().includes(f))
+    },
+    openNewChat() {
+      this.newChatFilter = ''
+      this.showNewChat = true
+      this.loadAllUsers()
+    },
+    openNewGroup() {
+      this.newGroupName = ''
+      this.groupMemberFilter = ''
+      this.selectedMembers = []
+      this.groupError = ''
+      this.showNewGroup = true
+      this.loadAllUsers()
+    },
+    isSelected(user) {
+      return this.selectedMembers.some(u => u.id === user.id)
+    },
+    toggleMember(user) {
+      if (this.isSelected(user)) {
+        this.selectedMembers = this.selectedMembers.filter(u => u.id !== user.id)
+      } else {
+        this.selectedMembers.push(user)
       }
     },
     async startConversation(user) {
@@ -174,46 +246,36 @@ export default {
         await this.loadConversations()
         this.openConversation(response.data)
       } catch (err) {
-        console.error('Error starting conversation:', err)
+        this.error = errorText(err, 'Could not start the conversation')
       }
     },
     async startConversationFromModal(user) {
-      await this.startConversation(user)
       this.showNewChat = false
-      this.newChatUsername = ''
-      this.newChatResults = []
+      await this.startConversation(user)
     },
     async createGroup() {
+      this.creatingGroup = true
+      this.groupError = ''
       try {
-        const response = await axios.post('/groups', { name: this.newGroupName })
+        const response = await axios.post('/groups', { name: this.newGroupName.trim() })
+        const groupId = response.data.id
+        for (const member of this.selectedMembers) {
+          await axios.post(`/groups/${groupId}/members`, { userId: member.id })
+        }
         this.showNewGroup = false
-        this.newGroupName = ''
         await this.loadConversations()
-        this.$router.push(`/conversations/${response.data.id}`)
+        this.$router.push(`/conversations/${groupId}`)
       } catch (err) {
-        console.error('Error creating group:', err)
+        this.groupError = errorText(err, 'Could not create the group')
+      } finally {
+        this.creatingGroup = false
       }
     },
     openConversation(conv) {
-      this.selectedConversation = conv.id
       this.$router.push(`/conversations/${conv.id}`)
     },
     goToProfile() {
       this.$router.push('/profile')
-    },
-    getInitial(name) {
-      return name ? name.charAt(0).toUpperCase() : '?'
-    },
-    formatTime(timestamp) {
-      if (!timestamp) return ''
-      const date = new Date(timestamp)
-      const now = new Date()
-      const diff = now - date
-      
-      if (diff < 86400000) {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-      return date.toLocaleDateString()
     }
   }
 }
