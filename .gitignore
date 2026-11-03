@@ -3,3 +3,4 @@ webapi
 .DS_Store
 webui/dist/
 webui/node_modules/
+EXAM_CHEATSHEET.md
